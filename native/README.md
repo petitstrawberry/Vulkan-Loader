@@ -14,8 +14,8 @@ Build with a Scarlet Rust toolchain whose std includes the TLS allocator-owner
 fix (petitstrawberry/rust commit 26d00a8a3a8489d73f5ae3575880e9f915dfd0f2).
 Set these build inputs to canonical source/tool locations:
 
-- `SCARLET_SOURCE_DIR`: Scarlet source, including native libc headers and companion C++ sources.
-- `VULKAN_HEADERS_INSTALL_DIR`: matching Vulkan-Headers 1.4.365 installation.
+- Native libc headers and companion sources come from `scarlet-libc` Cargo dependency metadata.
+- `VULKAN_HEADERS_SOURCE_DIR`: matching Vulkan-Headers 1.4.365 source. The header-only CMake install stays in Cargo OUT_DIR.
 - `SCARLET_LLVM_LIBC_SOURCE_DIR`: LLVM libc source used by Scarlet’s native conversion/scanning code.
 - `SCARLET_NATIVE_CC`, `SCARLET_NATIVE_CXX`: raw Clang 21 executables.
 - `SCARLET_NATIVE_AR`, `SCARLET_NATIVE_RANLIB`, `SCARLET_NATIVE_NM`: LLVM archive/symbol tools.
@@ -33,3 +33,7 @@ an executable startup. Final ELF auditing must reject unexpected imports,
 `DT_NEEDED`, ELF TLS, unsupported relocations, and exposed CRT/Rust internals.
 The expected imports are `dlopen`, `dlsym`, `dlclose`, `dlerror`, and weak
 `environ`. This development port is not a Vulkan conformance claim.
+
+The native package recipe is `native/bundle.toml`. Source retrieval and Cargo
+output/cache management belong to the SDK; this package does not clone or hash
+dependencies in an installation script.

@@ -1,0 +1,18 @@
+# Source-owned native loader package; the SDK builds and stages its cdylib.
+[[layers]]
+kind = "cargo"
+source = "."
+package = "scarlet-vulkan-loader"
+lib = "vulkan"
+architectures = ["aarch64"]
+to = "/lib/libvulkan.so.1"
+
+[[layers]]
+kind = "copy"
+source = "../LICENSE.txt"
+to = "/share/licenses/Vulkan-Loader/LICENSE.txt"
+
+[[layers]]
+kind = "copy"
+source = "../LICENSES"
+to = "/share/licenses/Vulkan-Loader/LICENSES"

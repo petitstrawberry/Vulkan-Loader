@@ -29,8 +29,9 @@ fn main() {
         "aarch64",
         "native export ABI currently verified on AArch64"
     );
-    let scarlet = input("SCARLET_SOURCE_DIR").canonicalize().unwrap();
-    let headers = input("VULKAN_HEADERS_INSTALL_DIR").canonicalize().unwrap();
+    let include = input("DEP_SCARLET_C_INCLUDE").canonicalize().unwrap();
+    let native = input("DEP_SCARLET_C_NATIVE").canonicalize().unwrap();
+    let headers_source = input("VULKAN_HEADERS_SOURCE_DIR").canonicalize().unwrap();
     let llvm_libc = input("SCARLET_LLVM_LIBC_SOURCE_DIR")
         .canonicalize()
         .unwrap();
@@ -45,22 +46,55 @@ fn main() {
         .unwrap()
         .to_path_buf();
     let build = out.join("cmake");
+    let headers = out.join("headers");
+    let cmake = env::var("CMAKE").unwrap_or_else(|_| "cmake".into());
+    run(Command::new(&cmake)
+        .arg("-S")
+        .arg(&headers_source)
+        .arg("-B")
+        .arg(out.join("headers-build"))
+        .args(["-G", "Ninja", "-DVULKAN_HEADERS_ENABLE_TESTS=OFF"])
+        .arg(format!("-DCMAKE_INSTALL_PREFIX={}", headers.display())));
+    run(Command::new(&cmake)
+        .arg("--install")
+        .arg(out.join("headers-build")));
     let resource = run(Command::new(&cc).arg("-print-resource-dir"))
         .trim()
         .to_string();
     let flags = format!(
-        "-nostdinc -isystem {resource}/include -isystem {}/user/lib/scarlet-libc/include -D__scarlet__=1 -ffunction-sections -fdata-sections -fPIC -mno-outline-atomics",
-        scarlet.display()
+        "-nostdinc -isystem {resource}/include -isystem {} -D__scarlet__=1 -ffunction-sections -fdata-sections -fPIC -mno-outline-atomics",
+        include.display()
     );
-    let cmake = env::var("CMAKE").unwrap_or_else(|_| "cmake".into());
     let configure = |extra: &str| {
-        run(Command::new(&cmake).arg("-S").arg(&source).arg("-B").arg(&build).args(["-G", "Ninja"])
-            .arg(format!("-DCMAKE_TOOLCHAIN_FILE={}/user/lib/scarlet-libc/native/cmake/aarch64-scarlet.cmake", scarlet.display()))
-            .arg(format!("-DCMAKE_C_COMPILER={}", cc.display())).arg(format!("-DCMAKE_ASM_COMPILER={}", cc.display()))
-            .arg(format!("-DCMAKE_AR={}", ar.display())).arg(format!("-DCMAKE_RANLIB={}", ranlib.display()))
-            .arg(format!("-DVulkanHeaders_DIR={}/share/cmake/VulkanHeaders", headers.display()))
-            .arg(format!("-DCMAKE_C_FLAGS={flags} {extra}")).arg(format!("-DCMAKE_ASM_FLAGS={flags}"))
-            .args(["-DCMAKE_BUILD_TYPE=Release", "-DSCARLET_STATIC_LOADER=ON", "-DBUILD_TESTS=OFF", "-DUSE_GAS=ON", "-DSYSCONFDIR=/etc", "-DFALLBACK_DATA_DIRS=/share:/usr/share", "-DHAVE_ALLOCA_H=1"]));
+        run(Command::new(&cmake)
+            .arg("-S")
+            .arg(&source)
+            .arg("-B")
+            .arg(&build)
+            .args(["-G", "Ninja"])
+            .arg(format!(
+                "-DCMAKE_TOOLCHAIN_FILE={}/cmake/aarch64-scarlet.cmake",
+                native.display()
+            ))
+            .arg(format!("-DCMAKE_C_COMPILER={}", cc.display()))
+            .arg(format!("-DCMAKE_ASM_COMPILER={}", cc.display()))
+            .arg(format!("-DCMAKE_AR={}", ar.display()))
+            .arg(format!("-DCMAKE_RANLIB={}", ranlib.display()))
+            .arg(format!(
+                "-DVulkanHeaders_DIR={}/share/cmake/VulkanHeaders",
+                headers.display()
+            ))
+            .arg(format!("-DCMAKE_C_FLAGS={flags} {extra}"))
+            .arg(format!("-DCMAKE_ASM_FLAGS={flags}"))
+            .args([
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DSCARLET_STATIC_LOADER=ON",
+                "-DBUILD_TESTS=OFF",
+                "-DUSE_GAS=ON",
+                "-DSYSCONFDIR=/etc",
+                "-DFALLBACK_DATA_DIRS=/share:/usr/share",
+                "-DHAVE_ALLOCA_H=1",
+            ]));
         run(Command::new(&cmake)
             .arg("--build")
             .arg(&build)
@@ -84,10 +118,7 @@ fn main() {
         .clang_arg("-nostdinc")
         .clang_arg(format!("-I{}/include", headers.display()))
         .clang_arg(format!("-isystem{resource}/include"))
-        .clang_arg(format!(
-            "-isystem{}/user/lib/scarlet-libc/include",
-            scarlet.display()
-        ))
+        .clang_arg(format!("-isystem{}", include.display()))
         .layout_tests(false)
         .generate_comments(false);
     for symbol in &symbols {
@@ -144,7 +175,7 @@ fn main() {
     // cJSON needs correctly rounded strtod; use the native libc companion's
     // real LLVM conversion source, without pulling in an executable startup.
     for file in ["float-conversion.cpp", "scanf.cpp"] {
-        let float_source = scarlet.join("user/lib/scarlet-libc/native").join(file);
+        let float_source = native.join(file);
         let float_object = out.join(format!("{file}.o"));
         run(Command::new(&cxx)
             .args([
@@ -162,10 +193,7 @@ fn main() {
                 "-D__scarlet__=1",
             ])
             .arg(format!("-isystem{resource}/include"))
-            .arg(format!(
-                "-isystem{}/user/lib/scarlet-libc/include",
-                scarlet.display()
-            ))
+            .arg(format!("-isystem{}", include.display()))
             .arg(format!("-I{}", llvm_libc.display()))
             .arg("-c")
             .arg(&float_source)
@@ -193,8 +221,5 @@ fn main() {
     }
     println!("cargo:rerun-if-changed=../loader");
     println!("cargo:rerun-if-changed=../CMakeLists.txt");
-    println!(
-        "cargo:rerun-if-changed={}/user/lib/scarlet-libc/include",
-        scarlet.display()
-    );
+    println!("cargo:rerun-if-changed={}", include.display());
 }
