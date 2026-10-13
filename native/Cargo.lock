@@ -200,12 +200,12 @@ checksum = "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
 [[package]]
 name = "scarlet-abi"
 version = "1.0.0"
-source = "git+https://github.com/petitstrawberry/Scarlet?rev=669d181891581436bda2b4e7dc7c656387cf31ba#669d181891581436bda2b4e7dc7c656387cf31ba"
+source = "git+https://github.com/petitstrawberry/Scarlet?rev=f75a61a23eee5dfdeaddd67cafdff78875fd36ff#f75a61a23eee5dfdeaddd67cafdff78875fd36ff"
 
 [[package]]
 name = "scarlet-libc"
 version = "0.1.0"
-source = "git+https://github.com/petitstrawberry/Scarlet?rev=669d181891581436bda2b4e7dc7c656387cf31ba#669d181891581436bda2b4e7dc7c656387cf31ba"
+source = "git+https://github.com/petitstrawberry/Scarlet?rev=f75a61a23eee5dfdeaddd67cafdff78875fd36ff#f75a61a23eee5dfdeaddd67cafdff78875fd36ff"
 dependencies = [
  "libm",
  "scarlet-abi",
@@ -215,7 +215,7 @@ dependencies = [
 [[package]]
 name = "scarlet-sys"
 version = "1.0.0"
-source = "git+https://github.com/petitstrawberry/Scarlet?rev=669d181891581436bda2b4e7dc7c656387cf31ba#669d181891581436bda2b4e7dc7c656387cf31ba"
+source = "git+https://github.com/petitstrawberry/Scarlet?rev=f75a61a23eee5dfdeaddd67cafdff78875fd36ff#f75a61a23eee5dfdeaddd67cafdff78875fd36ff"
 dependencies = [
  "scarlet-abi",
 ]

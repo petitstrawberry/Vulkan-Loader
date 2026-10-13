@@ -12,7 +12,7 @@ name = "vulkan"
 crate-type = ["cdylib"]
 
 [dependencies]
-scarlet-libc = { git = "https://github.com/petitstrawberry/Scarlet", rev = "669d181891581436bda2b4e7dc7c656387cf31ba" }
+scarlet-libc = { git = "https://github.com/petitstrawberry/Scarlet", rev = "f75a61a23eee5dfdeaddd67cafdff78875fd36ff" }
 
 [build-dependencies]
 bindgen = "0.72"
