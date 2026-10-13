@@ -14,7 +14,7 @@ Build with a Scarlet Rust toolchain whose std includes the TLS allocator-owner
 fix (petitstrawberry/rust commit 26d00a8a3a8489d73f5ae3575880e9f915dfd0f2).
 Set these build inputs to canonical source/tool locations:
 
-- Native libc headers and companion sources come from `scarlet-libc` Cargo dependency metadata.
+- Native libc headers and companion sources come from the SDK-owned `scarlet-libc` Cargo dependency metadata.
 - `VULKAN_HEADERS_SOURCE_DIR`: matching Vulkan-Headers 1.4.365 source. The header-only CMake install stays in Cargo OUT_DIR.
 - `SCARLET_LLVM_LIBC_SOURCE_DIR`: LLVM libc source used by Scarlet’s native conversion/scanning code.
 - `SCARLET_NATIVE_CC`, `SCARLET_NATIVE_CXX`: raw Clang 21 executables.
