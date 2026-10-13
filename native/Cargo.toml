@@ -1,0 +1,25 @@
+[package]
+name = "scarlet-vulkan-loader"
+version = "1.4.365"
+edition = "2024"
+license = "Apache-2.0"
+build = "build.rs"
+
+[workspace]
+
+[lib]
+name = "vulkan"
+crate-type = ["cdylib"]
+
+[dependencies]
+scarlet-libc = { git = "https://github.com/petitstrawberry/Scarlet", rev = "669d181891581436bda2b4e7dc7c656387cf31ba" }
+
+[build-dependencies]
+bindgen = "0.72"
+syn = { version = "2", features = ["full"] }
+quote = "1"
+
+[profile.release]
+panic = "abort"
+lto = false
+codegen-units = 1

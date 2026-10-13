@@ -597,7 +597,13 @@ out:
 // out_path
 VkResult get_library_path_of_dl_handle(const struct loader_instance *inst, loader_platform_dl_handle lib_handle,
                                        PFN_vkGetInstanceProcAddr gipa, char **out_path) {
-#if COMMON_UNIX_PLATFORMS
+#if defined(__scarlet__)
+    // scarlet-ld has no address-to-object query yet. Manifest discovery already
+    // supplies its path; direct-driver diagnostics can omit this optional name.
+    (void)inst; (void)lib_handle; (void)gipa;
+    *out_path = NULL;
+    return VK_SUCCESS;
+#elif COMMON_UNIX_PLATFORMS
     (void)lib_handle;
     Dl_info dl_info = {0};
     if (dladdr(gipa, &dl_info) != 0 && NULL != dl_info.dli_fname) {

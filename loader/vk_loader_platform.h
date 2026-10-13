@@ -44,7 +44,7 @@
 
 // Set of platforms with a common set of functionality which is queried throughout the program
 #if defined(__linux__) || defined(__APPLE__) || defined(__Fuchsia__) || defined(__QNX__) || defined(__FreeBSD__) || \
-    defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__GNU__) || defined(__CYGWIN__)
+    defined(__scarlet__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || defined(__GNU__) || defined(__CYGWIN__)
 #define COMMON_UNIX_PLATFORMS 1
 #else
 #define COMMON_UNIX_PLATFORMS 0
@@ -56,7 +56,9 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <stdlib.h>
+#if !defined(__scarlet__)
 #include <libgen.h>
+#endif
 
 #elif defined(_WIN32)
 // WinBase.h defines CreateSemaphore and synchapi.h defines CreateEvent
@@ -299,7 +301,20 @@ static inline bool loader_platform_is_path_absolute(const char *path) {
 }
 
 // NOLINTNEXTLINE(concurrency-mt-unsafe) - no portable reentrant dirname; the returned buffer is copied by callers immediately
+#if defined(__scarlet__)
+static inline char *loader_platform_dirname(char *path) {
+    if (!path || !*path) return ".";
+    size_t end = strlen(path);
+    while (end > 1 && path[end - 1] == '/') --end;
+    while (end && path[end - 1] != '/') --end;
+    if (!end) return ".";
+    while (end > 1 && path[end - 1] == '/') --end;
+    path[end] = '\0';
+    return path;
+}
+#else
 static inline char *loader_platform_dirname(char *path) { return dirname(path); }
+#endif
 
 // loader_platform_executable_path finds application path + name.
 // Path cannot be longer than 1024, returns NULL if it is greater than that.
@@ -361,7 +376,7 @@ static inline char *loader_platform_executable_path(char *buffer, size_t size) {
 
     return buffer;
 }
-#elif defined(__Fuchsia__) || defined(__OpenBSD__)
+#elif defined(__Fuchsia__) || defined(__OpenBSD__) || defined(__scarlet__)
 static inline char *loader_platform_executable_path(char *buffer, size_t size) { return NULL; }
 #elif defined(__QNX__)
 
@@ -404,7 +419,13 @@ static inline char *loader_platform_executable_path(char *buffer, size_t size) {
 // resolved at this time (which improves performance). Note that if not all symbols
 // can be resolved, this could cause crashes later. Use the LD_BIND_NOW environment
 // variable to force all symbols to be resolved here.
+#if defined(__scarlet__)
+// Match scarlet-ld's current contract, without pretending to provide LOCAL or
+// lazy binding. ICD entry points are still resolved through their own handles.
+#define LOADER_DLOPEN_MODE (RTLD_NOW | RTLD_GLOBAL)
+#else
 #define LOADER_DLOPEN_MODE (RTLD_LAZY | RTLD_LOCAL)
+#endif
 
 #if defined(__Fuchsia__)
 static inline loader_platform_dl_handle loader_platform_open_driver(const char *libPath) {

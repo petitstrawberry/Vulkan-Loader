@@ -162,6 +162,8 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Linux|BSD|DragonFly|GNU|CYGWIN")
         # vulkan_core.h includes <directfb.h> but the header is installed to directfb/directfb.h
         target_include_directories(platform_wsi INTERFACE ${DIRECTFB_INCLUDE_DIRS} ${DIRECTFB_INCLUDE_DIRS}/directfb)
     endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Scarlet")
+    # Offscreen Vulkan and native image sharing need no Linux WSI headers.
 elseif(CMAKE_SYSTEM_NAME MATCHES "QNX")
     message(FATAL_ERROR "See BUILD.md for QNX build")
 elseif(CMAKE_SYSTEM_NAME MATCHES "Fuchsia")
@@ -276,7 +278,7 @@ endif()
 # Add git branch and tag info in debug mode
 target_compile_definitions(loader_common_options INTERFACE $<$<CONFIG:DEBUG>:DEBUG;GIT_BRANCH_NAME="${GIT_BRANCH_NAME}";GIT_TAG_INFO="${GIT_TAG_INFO}">)
 
-if (NOT (WIN32 OR APPLE))
+if (NOT (WIN32 OR APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Scarlet"))
     # Check for the existence of the secure_getenv or __secure_getenv commands
     include(CheckFunctionExists)
 

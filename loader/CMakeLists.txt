@@ -61,8 +61,10 @@ else()
         target_compile_definitions(loader_specific_options INTERFACE HAVE_ALLOCA_H)
     endif()
 
-    set(THREADS_PREFER_PTHREAD_FLAG ON)
-    find_package(Threads REQUIRED)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Scarlet")
+        set(THREADS_PREFER_PTHREAD_FLAG ON)
+        find_package(Threads REQUIRED)
+    endif()
 endif()
 
 set(NORMAL_LOADER_SRCS
@@ -424,7 +426,14 @@ else()
         mark_as_advanced(APPLE_STATIC_LOADER)
     endif()
 
-    if(APPLE_STATIC_LOADER)
+    option(SCARLET_STATIC_LOADER "Build the C archive for the native Rust CRT final link" OFF)
+    if(SCARLET_STATIC_LOADER AND NOT CMAKE_SYSTEM_NAME STREQUAL "Scarlet")
+        message(FATAL_ERROR "SCARLET_STATIC_LOADER requires Scarlet")
+    endif()
+    if(SCARLET_STATIC_LOADER)
+        add_library(vulkan STATIC)
+        set_target_properties(vulkan PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    elseif(APPLE_STATIC_LOADER)
         add_library(vulkan STATIC)
         target_compile_definitions(vulkan PRIVATE APPLE_STATIC_LOADER)
 
@@ -441,7 +450,9 @@ else()
         VERSION "${VULKAN_LOADER_VERSION}"
     )
 
-    target_link_libraries(vulkan PRIVATE ${CMAKE_DL_LIBS} m Threads::Threads)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Scarlet")
+        target_link_libraries(vulkan PRIVATE ${CMAKE_DL_LIBS} m Threads::Threads)
+    endif()
 
     set_target_properties(vulkan PROPERTIES OUTPUT_NAME ${API_TYPE})
 
@@ -542,6 +553,11 @@ endif()
 
 if (BUILD_TESTS)
     target_compile_definitions(vulkan PRIVATE SHOULD_EXPORT_TEST_FUNCTIONS)
+endif()
+
+if(SCARLET_STATIC_LOADER)
+    install(TARGETS vulkan ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    return()
 endif()
 
 if (APPLE_STATIC_LOADER)
