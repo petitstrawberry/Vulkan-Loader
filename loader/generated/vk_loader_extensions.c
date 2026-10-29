@@ -18350,6 +18350,9 @@ bool extension_instance_gpa(struct loader_instance *ptr_instance, const char *na
 // Used to keep track of all enabled instance extensions
 void fill_out_enabled_instance_extensions(uint32_t extension_count, const char *const * extension_list, struct loader_instance_extension_enable_list* enables) {
     for (uint32_t i = 0; i < extension_count; i++) {
+#if defined(__scarlet__)
+        if (!strcmp(extension_list[i], "VK_SGFX_scarlet_surface")) { enables->sgfx_scarlet_surface = 1; continue; }
+#endif
 
     // ---- VK_KHR_surface extension commands
         if (0 == strcmp(extension_list[i], VK_KHR_SURFACE_EXTENSION_NAME)) { enables->khr_surface = 1; }
@@ -18906,6 +18909,9 @@ const VkLayerInstanceDispatchTable instance_disp = {
 // ICDs detected by the loader, then the extension name not in the list will be filtered out
 // before passing the list of extensions to the application.
 const char *const LOADER_INSTANCE_EXTENSIONS[] = {
+#if defined(__scarlet__)
+    "VK_SGFX_scarlet_surface",
+#endif
                                                   VK_KHR_SURFACE_EXTENSION_NAME,
                                                   VK_KHR_DISPLAY_EXTENSION_NAME,
 #if defined(VK_USE_PLATFORM_XLIB_KHR)

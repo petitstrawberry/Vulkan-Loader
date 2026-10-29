@@ -4555,6 +4555,10 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_gpdpa_instance_terminator(VkInst
 }
 
 VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL loader_gpa_instance_terminator(VkInstance inst, const char *pName) {
+#if defined(__scarlet__)
+    if (inst && !strcmp(pName, "vkCreateScarletSurfaceSGFX")) return (PFN_vkVoidFunction)scarlet_surface_terminator;
+    if (inst && !strcmp(pName, "vkGetPhysicalDeviceScarletPresentationSupportSGFX")) return (PFN_vkVoidFunction)scarlet_presentation_terminator;
+#endif
     // Global functions - Do not need a valid instance handle to query
     if (!strcmp(pName, "vkGetInstanceProcAddr")) {
         return (PFN_vkVoidFunction)loader_gpa_instance_terminator;

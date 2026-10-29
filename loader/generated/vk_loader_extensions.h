@@ -528,6 +528,9 @@ struct loader_icd_term_dispatch {
 };
 
 struct loader_instance_extension_enable_list {
+#if defined(__scarlet__)
+    uint8_t sgfx_scarlet_surface;
+#endif
     uint8_t khr_surface;
     uint8_t khr_display;
 #if defined(VK_USE_PLATFORM_XLIB_KHR)

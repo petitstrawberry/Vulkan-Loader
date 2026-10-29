@@ -93,6 +93,17 @@ VkResult wsi_unwrap_icd_surface(struct loader_icd_term *icd_term, VkSurfaceKHR *
         if (VK_NULL_HANDLE == icd_term->surface_list.list[icd_surface->surface_index]) {
             // If the surface does not exist yet for the target ICD, then create it lazily
             switch (icd_surface->base.platform) {
+#if defined(__scarlet__)
+                case VK_ICD_WSI_PLATFORM_SCARLET: {
+                    PFN_vkCreateScarletSurfaceSGFX create = (PFN_vkCreateScarletSurfaceSGFX)
+                        icd_term->scanned_icd->GetInstanceProcAddr(icd_term->instance, "vkCreateScarletSurfaceSGFX");
+                    if (!create || !icd_term->enabled_instance_extensions.sgfx_scarlet_surface)
+                        return VK_ERROR_EXTENSION_NOT_PRESENT;
+                    result = create(icd_term->instance, (const VkScarletSurfaceCreateInfoSGFX *)icd_surface->create_info,
+                                    pAllocator, &icd_term->surface_list.list[icd_surface->surface_index]);
+                    break;
+                }
+#endif
 #if defined(VK_USE_PLATFORM_WAYLAND_KHR)
                 case VK_ICD_WSI_PLATFORM_WAYLAND:
                     if (NULL != icd_term->dispatch.CreateWaylandSurfaceKHR &&
@@ -2880,9 +2891,70 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceSurfaceFormats2KHR(Vk
     return res;
 }
 
+#if defined(__scarlet__)
+VkResult VKAPI_CALL scarlet_surface_terminator(VkInstance instance, const VkScarletSurfaceCreateInfoSGFX *info,
+                                              const VkAllocationCallbacks *allocator, VkSurfaceKHR *surface) {
+    if (!surface) return VK_ERROR_INITIALIZATION_FAILED;
+    *surface = VK_NULL_HANDLE;
+    struct loader_instance *inst = loader_get_instance(instance);
+    if (!inst || !inst->enabled_extensions.khr_surface || !inst->enabled_extensions.sgfx_scarlet_surface)
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    if (!info || info->sType != VK_STRUCTURE_TYPE_SCARLET_SURFACE_CREATE_INFO_SGFX || info->pNext || info->flags || !info->window)
+        return VK_ERROR_INITIALIZATION_FAILED;
+    loader_platform_thread_lock_mutex(&loader_lock);
+    VkIcdSurface *wrapped = NULL;
+    VkResult result = allocate_icd_surface_struct(inst, sizeof(VkIcdSurfaceBase), sizeof(VkIcdSurfaceBase), allocator, &wrapped);
+    if (result == VK_SUCCESS) {
+        wrapped->base.platform = VK_ICD_WSI_PLATFORM_SCARLET;
+        const struct loader_struct_type_info types[] = {
+            {VK_STRUCTURE_TYPE_SCARLET_SURFACE_CREATE_INFO_SGFX, sizeof(*info)}
+        };
+        result = copy_surface_create_info(inst, wrapped, info, 1, types, "VkScarletSurfaceCreateInfoSGFX", allocator);
+        if (result == VK_SUCCESS) *surface = wrap_surface_handle(wrapped);
+    }
+    cleanup_surface_creation(inst, result, wrapped, allocator);
+    loader_platform_thread_unlock_mutex(&loader_lock);
+    return result;
+}
+VkBool32 VKAPI_CALL scarlet_presentation_terminator(VkPhysicalDevice physical, uint32_t family) {
+    struct loader_physical_device_term *device = (struct loader_physical_device_term *)physical;
+    struct loader_icd_term *icd = device->this_icd_term;
+    if (!icd->enabled_instance_extensions.sgfx_scarlet_surface) return VK_FALSE;
+    PFN_vkGetPhysicalDeviceScarletPresentationSupportSGFX query = (PFN_vkGetPhysicalDeviceScarletPresentationSupportSGFX)
+        icd->scanned_icd->GetInstanceProcAddr(icd->instance, "vkGetPhysicalDeviceScarletPresentationSupportSGFX");
+    return query ? query(device->phys_dev, family) : VK_FALSE;
+}
+static VkResult VKAPI_CALL scarlet_surface_trampoline(VkInstance instance, const VkScarletSurfaceCreateInfoSGFX *info,
+                                                     const VkAllocationCallbacks *allocator, VkSurfaceKHR *surface) {
+    struct loader_instance *inst = loader_get_instance(instance);
+    if (!inst) return VK_ERROR_INITIALIZATION_FAILED;
+    PFN_vkCreateScarletSurfaceSGFX create = (PFN_vkCreateScarletSurfaceSGFX)
+        inst->disp->layer_inst_disp.GetInstanceProcAddr(inst->instance, "vkCreateScarletSurfaceSGFX");
+    return create ? create(inst->instance, info, allocator, surface) : VK_ERROR_EXTENSION_NOT_PRESENT;
+}
+static VkBool32 VKAPI_CALL scarlet_presentation_trampoline(VkPhysicalDevice physical, uint32_t family) {
+    VkPhysicalDevice unwrapped = loader_unwrap_physical_device(physical);
+    if (!unwrapped) return VK_FALSE;
+    struct loader_physical_device_tramp *device = (struct loader_physical_device_tramp *)physical;
+    struct loader_instance *inst = device->this_instance;
+    PFN_vkGetPhysicalDeviceScarletPresentationSupportSGFX query = (PFN_vkGetPhysicalDeviceScarletPresentationSupportSGFX)
+        inst->disp->layer_inst_disp.GetInstanceProcAddr(inst->instance, "vkGetPhysicalDeviceScarletPresentationSupportSGFX");
+    return query ? query(unwrapped, family) : VK_FALSE;
+}
+#endif
+
 bool wsi_swapchain_instance_gpa(struct loader_instance *loader_inst, const char *name, void **addr) {
     *addr = NULL;
-
+#if defined(__scarlet__)
+    if (!strcmp(name, "vkCreateScarletSurfaceSGFX")) {
+        *addr = loader_inst->enabled_extensions.sgfx_scarlet_surface ? (void *)scarlet_surface_trampoline : NULL;
+        return true;
+    }
+    if (!strcmp(name, "vkGetPhysicalDeviceScarletPresentationSupportSGFX")) {
+        *addr = loader_inst->enabled_extensions.sgfx_scarlet_surface ? (void *)scarlet_presentation_trampoline : NULL;
+        return true;
+    }
+#endif
     // Functions for the VK_KHR_surface extension:
     if (!strcmp("vkDestroySurfaceKHR", name)) {
         *addr = loader_inst->enabled_extensions.khr_surface ? (void *)vkDestroySurfaceKHR : NULL;
