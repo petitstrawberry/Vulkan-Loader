@@ -414,7 +414,7 @@ VKAPI_ATTR void* VKAPI_CALL loader_lookup_instance_dispatch_table(const VkLayerI
     # Create the extension enable union
     def OutputIcdExtensionEnableUnion(self, out):
 
-        out.append( 'struct loader_instance_extension_enable_list {\n')
+        out.append( 'struct loader_instance_extension_enable_list {\n#if defined(__scarlet__)\n    uint8_t sgfx_scarlet_surface;\n#endif\n')
         for extension in self.instance_extensions:
             if extension.protect:
                 out.append(f'#if defined({extension.protect})\n')
@@ -1285,7 +1285,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
 
         out.append( '// Used to keep track of all enabled instance extensions\n')
         out.append( 'void fill_out_enabled_instance_extensions(uint32_t extension_count, const char *const * extension_list, struct loader_instance_extension_enable_list* enables) {\n')
-        out.append( '    for (uint32_t i = 0; i < extension_count; i++) {\n')
+        out.append( '    for (uint32_t i = 0; i < extension_count; i++) {\n#if defined(__scarlet__)\n        if (!strcmp(extension_list[i], "VK_SGFX_scarlet_surface")) { enables->sgfx_scarlet_surface = 1; continue; }\n#endif\n')
         e = ''
         cur_extension_name = ''
         for extension in self.instance_extensions:
@@ -1401,7 +1401,7 @@ VKAPI_ATTR VkResult VKAPI_CALL vkDevExtError(VkDevice dev) {
         out.append( '// If an instance extension name is not in this list, but it is exported by one or more of the\n')
         out.append( '// ICDs detected by the loader, then the extension name not in the list will be filtered out\n')
         out.append( '// before passing the list of extensions to the application.\n')
-        out.append( 'const char *const LOADER_INSTANCE_EXTENSIONS[] = {\n')
+        out.append( 'const char *const LOADER_INSTANCE_EXTENSIONS[] = {\n#if defined(__scarlet__)\n    "VK_SGFX_scarlet_surface",\n#endif\n')
         for extension in self.instance_extensions:
 
             if extension.protect is not None:

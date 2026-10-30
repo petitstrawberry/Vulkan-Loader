@@ -89,6 +89,10 @@ typedef struct {
 
 } VkIcdSurface;
 
+#if defined(__scarlet__)
+#include "scarlet_wsi.h"
+#endif
+
 VkResult wsi_unwrap_icd_surface(struct loader_icd_term *icd_term, VkSurfaceKHR *surface);
 
 bool wsi_swapchain_instance_gpa(struct loader_instance *ptr_instance, const char *name, void **addr);
